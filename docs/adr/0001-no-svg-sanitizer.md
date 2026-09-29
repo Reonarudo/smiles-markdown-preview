@@ -9,6 +9,11 @@ on anything it does not recognise, and depicts the graph from its own tables. Ev
 `<text>` in the output is an element symbol, a charge, an isotope number or a fixed
 stereo annotation; the only id is the one this extension passes in.
 
+SMARTS patterns do add annotation text — `[C,N]`, `!a,h>0`, `pi1` — but OpenChemLib
+regenerates it from the query features it parsed into the molecule, not by copying the
+pattern; a character it cannot parse is an error, never passed through. The annotation
+is also XML-escaped (`h&gt;0`), which the tests pin.
+
 ## Considered options
 
 The sibling
@@ -29,5 +34,5 @@ There is no sanitizer behind that escaping to catch a mistake;
 
 OpenChemLib's invisible editor hit targets (`class="event"`) are stripped for size,
 not safety. If a future OpenChemLib release lets SMILES carry free text into the
-depiction (custom atom labels, for instance), this decision must be revisited before
-the dependency is updated.
+depiction (custom atom labels, for instance), or starts echoing SMARTS source text into
+its annotations, this decision must be revisited before the dependency is updated.

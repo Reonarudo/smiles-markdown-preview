@@ -14,7 +14,8 @@ import { dirname, join, resolve } from 'node:path';
 /** [file name, preview scroll offset in CSS pixels]. */
 const FRAMES = [
   ['structures', 0],
-  ['caption-and-error', 430]
+  ['caption-and-error', 430],
+  ['smarts', 900]
 ];
 const WIDTH = 1357;
 const HEIGHT = 768;

@@ -25,3 +25,15 @@ C[C@H](N)C(=O)O
 ```smiles
 C1CC
 ```
+
+## SMARTS patterns
+
+```smarts
+[CX3](=O)[OX2H1] carboxylic acid
+[C,N;!H0]~* C or N with a hydrogen
+[NX3;H2,H1;!$(NC=O)] amine, not amide
+```
+
+```smarts {caption="Figure 2: any six-membered carbon ring, with any bonds" align="center"}
+[#6]1~[#6]~[#6]~[#6]~[#6]~[#6]~1
+```

@@ -37,7 +37,42 @@ Expect: a wedge bond and a small "this enantiomer" annotation.
 C[C@H](N)C(=O)O L-alanine
 ```
 
-## 5. Parse error
+## 5. SMARTS patterns
+
+Expect: three patterns side by side, labelled. The acid's carbon carries `pi1`
+and its hydroxyl `h1,pi0`; the second shows `[C,N]` annotated `!a,h>0` bonded to
+a `?`; the amine's nitrogen carries `h1-2,pi0` and the excluded carbonyl is
+shaded pink. Patterns are drawn larger than the molecules above.
+
+```smarts
+[CX3](=O)[OX2H1] carboxylic acid
+[C,N;!H0]~* C or N with a hydrogen
+[NX3;H2,H1;!$(NC=O)] amine, not amide
+```
+
+## 6. SMARTS is never guessed
+
+Expect: the `smarts` fence draws the pattern; the `smiles` fence below it shows
+a warning-bordered box quoting `alternative atom definitions not supported`.
+
+```smarts {caption="As SMARTS"}
+[C,N;!H0]~*
+```
+
+```smiles {caption="As SMILES"}
+[C,N;!H0]~*
+```
+
+## 7. Unsupported SMARTS primitive
+
+Expect: an error quoting `unexpected character inside brackets: 'x'` with a caret
+under the `x`.
+
+```smarts
+[C;x3]
+```
+
+## 8. Parse error
 
 Expect: a warning-bordered box quoting `dangling ring closure` with a caret under
 the end of `C1CC`; the next section still renders.
@@ -46,10 +81,14 @@ the end of `C1CC`; the next section still renders.
 C1CC
 ```
 
-## 6. Delegated fence
+## 9. Delegated fence
 
-Expect: a plain code block, not a structure.
+Expect: plain code blocks, not structures.
 
 ```smi
 CCO left alone
+```
+
+```SMARTS
+[#6] uppercase tags are not claimed
 ```

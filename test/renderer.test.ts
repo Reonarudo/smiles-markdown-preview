@@ -65,3 +65,16 @@ test('the cache keeps the 96 most recently used strings', () => {
   render('m1');
   assert.deepEqual(runtime.seen, ['m1']);
 });
+
+test('the same string in the two notations is depicted and cached separately', () => {
+  const seen: string[] = [];
+  const render = createRenderer({ render: (source, notation = 'smiles') => {
+    seen.push(`${notation}:${source}`);
+    return { status: 'success', output: `<svg>${notation}</svg>` };
+  } });
+  assert.deepEqual(render('CO', 'smiles'), { status: 'success', output: '<svg>smiles</svg>' });
+  assert.deepEqual(render('CO', 'smarts'), { status: 'success', output: '<svg>smarts</svg>' });
+  render('CO', 'smiles');
+  render('CO', 'smarts');
+  assert.deepEqual(seen, ['smiles:CO', 'smarts:CO']);
+});

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0 — 2026-09-29
+
+- `smarts` fences draw SMARTS substructure queries, one per line with optional
+  labels, taking the same attributes and limits as `smiles` fences. Atom lists,
+  negations and other constraints are annotated on the atoms they apply to, and
+  patterns are drawn at 1.5 times the scale of molecules to keep them legible.
+- The notation comes from the fence tag and is never guessed; a SMARTS query in a
+  `smiles` fence remains a parse error.
+
 ## 0.1.0 — 2026-09-29
 
 - Render `smiles` fences in the Markdown preview with OpenChemLib 9.25.0, in a worker

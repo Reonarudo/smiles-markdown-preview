@@ -13,8 +13,32 @@ test('claims exactly smiles fences and passes the SMILES string through', () => 
   assert.equal(seen, 'CC(=O)O');
 });
 
+test('claims smarts fences and passes the notation with each line', () => {
+  const seen: [string, string][] = [];
+  const md = markdownPlugin(new MarkdownIt(), (source, notation) => { seen.push([source, notation]); return structure(); });
+  md.render('```smarts\n[#6][OX2H] alcohol\n```\n\n```smiles\nCCO\n```');
+  assert.deepEqual(seen, [['[#6][OX2H]', 'smarts'], ['CCO', 'smiles']]);
+});
+
+test('a pattern carries the smarts class beside the base class and the author\'s', () => {
+  const md = markdownPlugin(new MarkdownIt(), () => structure('<svg id="ocl"></svg>'));
+  assert.match(md.render('```smarts\n[#6]\n```'), /^<svg class="smiles smarts" id=/);
+  assert.match(md.render('```smarts {class="wide"}\n[#6]\n```'), /^<svg class="smiles smarts wide" id=/);
+  assert.match(md.render('```smiles\nC\n```'), /^<svg class="smiles" id=/);
+});
+
+test('smarts fences take the same attributes, and report in their own words', () => {
+  const md = markdownPlugin(new MarkdownIt(), () => ({ status: 'timeout', budget: 3000 }));
+  assert.match(md.render('```smarts {caption="Carboxylic acid"}\n[CX3](=O)[OX2H1]\n```'),
+    /Shorten the SMARTS pattern, split the pattern, or raise the limit\.[\s\S]*<figcaption>Carboxylic acid<\/figcaption>/);
+  const empty = markdownPlugin(new MarkdownIt(), () => structure());
+  assert.match(empty.render('```smarts\n```'), /The fence is empty\. Write one SMARTS pattern per line\./);
+  const unavailable = markdownPlugin(new MarkdownIt(), () => ({ status: 'unavailable', reason: 'x' }));
+  assert.match(unavailable.render('```smarts\n[#6]\n```'), /The SMARTS renderer could not start/);
+});
+
 test('preserves unrelated fences byte for byte including highlighting', () => {
-  for (const language of ['smi', 'SMILES', 'smiles extra', 'graphviz', 'pikchr', 'swift', '']) {
+  for (const language of ['smi', 'SMILES', 'SMARTS', 'smiles extra', 'smarts extra', 'smirks', 'graphviz', 'pikchr', 'swift', '']) {
     const input = '```' + language + '\nCCO\n```';
     const options = { highlight: () => '<b>highlight</b>' };
     const delegated = markdownPlugin(new MarkdownIt(options), () => { throw new Error('wrong fence'); });

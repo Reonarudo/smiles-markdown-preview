@@ -1,6 +1,6 @@
 import type MarkdownItConstructor from 'markdown-it';
 type MarkdownIt = InstanceType<typeof MarkdownItConstructor>;
-import { SVG_ID, type RenderResult } from './renderer';
+import { SVG_ID, type Notation, type RenderResult } from './renderer';
 import { parseAttributes, type FenceAttributes } from './attributes';
 import { parseMolecules, type MoleculeLine } from './molecules';
 import { randomBytes } from 'node:crypto';
@@ -9,18 +9,25 @@ import { randomBytes } from 'node:crypto';
 export const BASE_CLASS = 'smiles';
 
 /**
- * `smiles`, alone or followed by an attribute block. First word only, case-sensitive.
+ * `smiles` or `smarts`, alone or followed by an attribute block. First word only, case-sensitive;
+ * the tag is the notation every line of the fence is parsed in.
  *
  * A fence whose block is malformed is still claimed: the attributes are dropped and the structure
- * renders bare, rather than falling through to another renderer as a raw SMILES string (ADR 0002).
+ * renders bare, rather than falling through to another renderer as a raw string (ADR 0002).
  */
-const CLAIMED = /^smiles(\s+\{|$)/;
+const CLAIMED = /^(smiles|smarts)(?:\s+\{|$)/;
 
-export type Render = (smiles: string) => RenderResult;
+/** How the error reports name what a line of each notation holds. */
+const WORDING: Record<Notation, { name: string; line: string; whole: string }> = {
+  smiles: { name: 'SMILES', line: 'SMILES string', whole: 'molecule' },
+  smarts: { name: 'SMARTS', line: 'SMARTS pattern', whole: 'pattern' }
+};
+
+export type Render = (source: string, notation: Notation) => RenderResult;
 export type Report = (message: string) => void;
 
 /**
- * Claim `smiles` fences and render each of their lines as a structure.
+ * Claim `smiles` and `smarts` fences and render each of their lines as a structure.
  *
  * Every fence we do not claim is delegated to whichever fence renderer was registered before us
  * (markdown-it's default, or another extension's, e.g. a Graphviz or Pikchr preview).
@@ -34,7 +41,8 @@ export function markdownPlugin(md: MarkdownIt, render: Render, report: Report = 
   md.renderer.rules.fence = (tokens, index, options, env, self) => {
     const token = tokens[index]!;
     const info = token.info.trim();
-    if (!CLAIMED.test(info)) {
+    const claimed = CLAIMED.exec(info);
+    if (!claimed) {
       return original
         ? original(tokens, index, options, env, self)
         : self.renderToken(tokens, index, options);
@@ -43,14 +51,19 @@ export function markdownPlugin(md: MarkdownIt, render: Render, report: Report = 
     for (const diagnostic of diagnostics) {
       report(diagnostic);
     }
+    const notation = claimed[1] as Notation;
     const molecules = parseMolecules(token.content);
     if (molecules.length === 0) {
-      return errorReport(md, 'The fence is empty. Write one SMILES string per line.');
+      return errorReport(md, `The fence is empty. Write one ${WORDING[notation].line} per line.`);
     }
+    // A pattern's structure also carries `smarts`, so it can be styled apart from a molecule.
+    const extra = [notation === 'smarts' ? 'smarts' : undefined, attributes.class].filter(Boolean).join(' ') || undefined;
     const structures = molecules.map((molecule) => {
-      const result = render(molecule.smiles);
-      if (result.status !== 'success') return { molecule, html: errorReport(md, describe(result, molecule.smiles)) };
-      const svg = withClass(md, namespaceSvg(result.output, `sm-${session}-${++occurrence}`), attributes.class);
+      const result = render(molecule.smiles, notation);
+      if (result.status !== 'success') {
+        return { molecule, html: errorReport(md, describe(result, molecule.smiles, notation)) };
+      }
+      const svg = withClass(md, namespaceSvg(result.output, `sm-${session}-${++occurrence}`), extra);
       return { molecule, html: svg };
     });
     return wrap(md, row(md, structures), attributes);
@@ -106,14 +119,15 @@ function wrap(md: MarkdownIt, structure: string, attributes: FenceAttributes): s
 }
 
 /** The text of the error report shown in place of one structure. */
-function describe(result: Exclude<RenderResult, { status: 'success' }>, smiles: string): string {
+function describe(result: Exclude<RenderResult, { status: 'success' }>, smiles: string, notation: Notation): string {
+  const wording = WORDING[notation];
   if (result.status === 'timeout') {
     const seconds = (result.budget / 1000).toLocaleString('en-US', { maximumFractionDigits: 1 });
     return `Depiction took longer than ${seconds} s (smiles.depictionTimeout). ` +
-      'Shorten the SMILES string, split the molecule, or raise the limit.';
+      `Shorten the ${wording.line}, split the ${wording.whole}, or raise the limit.`;
   }
   if (result.status === 'unavailable') {
-    return `The SMILES renderer could not start: ${result.reason}. It will retry on the next render.`;
+    return `The ${wording.name} renderer could not start: ${result.reason}. It will retry on the next render.`;
   }
   // Echo the string with a caret under the position OpenChemLib names, so the author need not
   // count characters.

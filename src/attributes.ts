@@ -20,7 +20,7 @@ const KEYS: ReadonlySet<string> = new Set(['alt', 'caption', 'class', 'align']);
 const PAIR = /^([A-Za-z-]+)\s*=\s*("(?:\\["\\]|[^"\\])*"|'(?:\\['\\]|[^'\\])*')(?:\s+|$)/;
 
 /**
- * Read the attribute block of a SMILES fence's info string.
+ * Read the attribute block of a SMILES or SMARTS fence's info string.
  *
  * Total by construction: no input throws, and anything unrecognised is dropped rather than
  * reported in the preview (ADR 0002). A parser exception here would not degrade one fence — VS
@@ -30,7 +30,8 @@ const PAIR = /^([A-Za-z-]+)\s*=\s*("(?:\\["\\]|[^"\\])*"|'(?:\\['\\]|[^'\\])*')(
 export function parseAttributes(info: string): ParsedAttributes {
   const attributes: FenceAttributes = {};
   const diagnostics: string[] = [];
-  const body = info.trim().slice('smiles'.length).trim();
+  // Everything after the fence's tag, whichever notation it names.
+  const body = info.trim().replace(/^\S+/, '').trim();
   if (!body) {
     return { attributes, diagnostics };
   }

@@ -6,6 +6,15 @@ const capacity = 4_000_000;
 const maxSource = 4_000;
 const maxEntries = 96;
 
+/** The line notation a fence is written in: `smiles` describes a molecule, `smarts` a pattern. */
+export type Notation = 'smiles' | 'smarts';
+
+/** What the host posts to the worker for one depiction. */
+export interface Request {
+  notation: Notation;
+  source: string;
+}
+
 /** The id OpenChemLib writes on the root `<svg>` and into its `<style>`; replaced per occurrence. */
 export const SVG_ID = 'ocl';
 
@@ -17,7 +26,7 @@ export type RenderResult =
   | { status: 'unavailable'; reason: string };
 
 export interface Runtime {
-  render(smiles: string): RenderResult;
+  render(source: string, notation?: Notation): RenderResult;
   dispose(): void;
 }
 
@@ -79,9 +88,9 @@ export async function createRuntime(directory: string, options: RuntimeOptions =
   });
 
   return {
-    render(smiles) {
-      if (smiles.length > maxSource) {
-        return { status: 'failure', message: 'SMILES exceeds the 4 KB limit.' };
+    render(source, notation = 'smiles') {
+      if (source.length > maxSource) {
+        return { status: 'failure', message: `${notation.toUpperCase()} exceeds the 4 KB limit.` };
       }
       const current = worker ?? spawn();
       // Loading the library is waited for separately, so the depiction budget is the same for a
@@ -92,7 +101,7 @@ export async function createRuntime(directory: string, options: RuntimeOptions =
       }
       const budget = budgetFor();
       Atomics.store(state, 0, 0);
-      current.postMessage(smiles);
+      current.postMessage({ notation, source } satisfies Request);
       if (Atomics.wait(state, 0, 0, budget) === 'timed-out') {
         stop();
         return { status: 'timeout', budget };
@@ -114,21 +123,22 @@ export async function createRuntime(directory: string, options: RuntimeOptions =
  * so it is not cached.
  */
 export interface Renderer {
-  (smiles: string): RenderResult;
+  (source: string, notation?: Notation): RenderResult;
   /** Forget every outcome, so that cached timeouts are retried under a new budget. */
   clear(): void;
 }
 
 export function createRenderer(runtime: Pick<Runtime, 'render'>): Renderer {
   const cache = new Map<string, RenderResult>();
-  const render = (smiles: string): RenderResult => {
-    const key = createHash('sha256').update(smiles).digest('hex');
+  const render = (source: string, notation: Notation = 'smiles'): RenderResult => {
+    // The same string can mean different things in the two notations, so both are in the key.
+    const key = createHash('sha256').update(`${notation}\0${source}`).digest('hex');
     let result = cache.get(key);
     if (result) {
       // Re-insert so Map order tracks recency and the first key is the least recently used.
       cache.delete(key);
     } else {
-      result = runtime.render(smiles);
+      result = runtime.render(source, notation);
       if (result.status === 'unavailable') return result;
     }
     cache.set(key, result);

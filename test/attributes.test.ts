@@ -75,3 +75,8 @@ test('never throws, whatever the info string', () => {
 test('an empty value is a value, not a missing attribute', () => {
   assert.deepEqual(parseAttributes('smiles {alt=""}').attributes, { alt: '' });
 });
+
+test('a smarts fence\'s attribute block reads exactly like a smiles fence\'s', () => {
+  assert.deepEqual(parseAttributes('smarts {alt="Alcohol" align="left"}'), parseAttributes('smiles {alt="Alcohol" align="left"}'));
+  assert.deepEqual(parseAttributes('smarts'), { attributes: {}, diagnostics: [] });
+});

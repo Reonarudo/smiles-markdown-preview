@@ -28,6 +28,13 @@ exports.run = async () => {
   assert.match(mixed, /class="[^"]*\blanguage-graphviz"/);
   assert.match(mixed, /class="[^"]*\blanguage-swift"/);
 
+  // SMARTS fences: query features are drawn, and the same string is refused as SMILES.
+  const patterns = await render(fence('smarts {caption="Queries"}', '[CX3](=O)[OX2H1] acid\n[C,N;!H0]~*') + fence('smiles', '[C,N;!H0]~*'));
+  assert.equal((patterns.match(/<svg class="smiles smarts"/g) ?? []).length, 2);
+  assert.match(patterns, /<text [^>]*>\[C,N\]<\/text>/);
+  assert.match(patterns, /<figcaption>Queries<\/figcaption>/);
+  assert.match(patterns, /<div class="smiles-error" role="alert"><pre>alternative atom definitions not supported/);
+
   // Attributes, escaping and a tolerated typo.
   const attributed = await render(fence('smiles {alt="Ethanol" caption="Figure 1: <alcohol>" align="center" algin="x"}', 'CCO'));
   assert.match(attributed, /<figure class="smiles-figure smiles-align-center"><div role="img" aria-label="Ethanol"><svg class="smiles"/);

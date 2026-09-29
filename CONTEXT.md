@@ -1,7 +1,8 @@
 # SMILES Structure Preview
 
-A VS Code extension that turns SMILES strings, written in fenced code blocks, into
-rendered molecular structures inside VS Code's built-in Markdown preview.
+A VS Code extension that turns SMILES strings and SMARTS patterns, written in
+fenced code blocks, into rendered structures inside VS Code's built-in Markdown
+preview.
 
 ## Language
 
@@ -9,6 +10,22 @@ rendered molecular structures inside VS Code's built-in Markdown preview.
 A fenced code block that this extension claims as its own and renders as one or
 more structures, identified by the first word of its info string being `smiles`.
 _Avoid_: smi block, molecule block, code block
+
+**SMARTS fence**:
+A fenced code block claimed by this extension whose info string's first word is
+`smarts`; each of its lines is parsed as a SMARTS pattern, never as SMILES.
+_Avoid_: query block, pattern block
+
+**Notation**:
+Which line notation a fence is parsed in — SMILES or SMARTS — fixed by the
+fence's tag and never guessed from its content.
+_Avoid_: mode, format, language
+
+**SMARTS pattern**:
+One substructure query in SMARTS, ending at the first whitespace on its line of
+a SMARTS fence. Its structure shows each query constraint beside the atom or
+bond it applies to.
+_Avoid_: query, SMARTS string, filter
 
 **SMILES string**:
 One line-notation description of a molecule, ending at the first whitespace on
@@ -37,8 +54,8 @@ preview.
 _Avoid_: fallthrough, passthrough, skipping
 
 **Structure**:
-The rendered SVG depiction of one molecule, produced by OpenChemLib from a
-SMILES string.
+The rendered SVG depiction of one molecule or pattern, produced by OpenChemLib
+from a SMILES string or SMARTS pattern.
 _Avoid_: diagram, image, picture, drawing
 
 **Row**:
@@ -65,6 +82,6 @@ Where a figure sits across the width of the preview.
 _Avoid_: float, position, justification
 
 **Error report**:
-The message block shown in place of a structure when a SMILES string fails to
-parse, exceeds the time limit, or the renderer cannot start.
+The message block shown in place of a structure when a SMILES string or SMARTS
+pattern fails to parse, exceeds the time limit, or the renderer cannot start.
 _Avoid_: error message, alert, stack trace

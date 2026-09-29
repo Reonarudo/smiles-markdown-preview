@@ -73,3 +73,48 @@ test('a SMILES string over 4 KB is refused', async () => {
     runtime.dispose();
   }
 });
+
+test('a SMARTS pattern renders with its query features, and SMILES mode still rejects it', async () => {
+  const runtime = await createRuntime(resolve('dist'));
+  try {
+    const pattern = runtime.render('[C,N;!H0]~*', 'smarts');
+    assert.equal(pattern.status, 'success');
+    // OpenChemLib annotates the atom list and the hydrogen constraint on the depiction.
+    assert.ok(pattern.status === 'success' && /<text [^>]*>\[C,N\]<\/text>/.test(pattern.output));
+    // Patterns are drawn at 1.5 times the standard scale, so their annotations stay legible.
+    const molecule = runtime.render('CC', 'smiles');
+    const same = runtime.render('CC', 'smarts');
+    const width = (r: typeof same) => Number(r.status === 'success' && /width="([\d.]+)px"/.exec(r.output)?.[1]);
+    assert.ok(width(same) > width(molecule) * 1.3, `${width(same)} vs ${width(molecule)}`);
+    assert.equal(runtime.render('[C,N;!H0]~*', 'smiles').status, 'failure');
+    assert.equal(runtime.render('[C,N;!H0]~*').status, 'failure', 'SMILES is the default');
+  } finally {
+    runtime.dispose();
+  }
+});
+
+test('an unsupported SMARTS primitive is a failure naming its position', async () => {
+  const runtime = await createRuntime(resolve('dist'));
+  try {
+    assert.deepEqual(runtime.render('[C;x3]', 'smarts'),
+      { status: 'failure', message: "unexpected character inside brackets: 'x', position:3" });
+    assert.deepEqual(runtime.render('[#6]'.repeat(1_001), 'smarts'),
+      { status: 'failure', message: 'SMARTS exceeds the 4 KB limit.' });
+  } finally {
+    runtime.dispose();
+  }
+});
+
+test('SMARTS annotations are regenerated and escaped, and markup in a pattern is refused', async () => {
+  const runtime = await createRuntime(resolve('dist'));
+  try {
+    const annotated = runtime.render('[C;!H0]', 'smarts');
+    assert.ok(annotated.status === 'success' && /<text [^>]*>h&gt;0<\/text>/.test(annotated.output));
+    for (const hostile of ['[$(<script>)]', '[C;$(C<b>)]', '[#6&"x"]', '[C<1>]']) {
+      const result = runtime.render(hostile, 'smarts');
+      assert.equal(result.status, 'failure', hostile);
+    }
+  } finally {
+    runtime.dispose();
+  }
+});

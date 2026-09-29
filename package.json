@@ -1,10 +1,11 @@
 {
   "name": "smiles-structure-preview",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "SMILES Structure Preview",
-  "description": "Adds SMILES molecular structure rendering to VS Code's built-in Markdown preview",
+  "description": "Adds SMILES molecules and SMARTS patterns to VS Code's built-in Markdown preview",
   "keywords": [
     "smiles",
+    "smarts",
     "chemistry",
     "molecule",
     "structure",
