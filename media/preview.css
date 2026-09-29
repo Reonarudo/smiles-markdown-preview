@@ -1,0 +1,74 @@
+/* Scale a wide structure down to the preview column instead of letting it overflow. */
+svg.smiles {
+  max-width: 100%;
+  height: auto;
+  /* A white card in every theme: element colours follow the CPK convention and bonds are black,
+     so a structure is never recoloured or inverted — the padding and rounding make the white
+     read as a deliberate figure in dark themes rather than a rendering glitch. */
+  background: #fff;
+  border-radius: 6px;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+/* Several molecules from one fence sit side by side and wrap when the column is narrow. */
+.smiles-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1em;
+}
+
+.smiles-molecule {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .25em;
+}
+
+.smiles-label {
+  font-size: .9em;
+}
+
+.smiles-figure {
+  margin: 1em 0;
+}
+
+.smiles-figure figcaption {
+  margin-top: .5em;
+}
+
+.smiles-align-left {
+  text-align: left;
+}
+
+.smiles-align-left .smiles-row {
+  justify-content: flex-start;
+}
+
+.smiles-align-center {
+  text-align: center;
+}
+
+.smiles-align-center .smiles-row {
+  justify-content: center;
+}
+
+.smiles-align-right {
+  text-align: right;
+}
+
+.smiles-align-right .smiles-row {
+  justify-content: flex-end;
+}
+
+.smiles-error {
+  border-left: 3px solid var(--vscode-editorWarning-foreground, #b58900);
+  padding: .5em 1em;
+  margin: 1em 0;
+}
+
+.smiles-error pre {
+  white-space: pre-wrap;
+  margin: 0;
+}
