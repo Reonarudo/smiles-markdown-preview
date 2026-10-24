@@ -3,14 +3,14 @@ import { mkdir } from 'node:fs/promises';
 
 await mkdir('dist', { recursive: true });
 await build({
-  entryPoints: ['src/extension.ts', 'src/worker.ts'],
+  entryPoints: ['src/extension.ts'],
   outdir: 'dist',
   bundle: true,
   platform: 'node',
-  target: 'node20',
+  target: 'node22',
   format: 'cjs',
-  // `vscode` is provided by the host. OpenChemLib is bundled into `worker.js`, so the packaged
-  // extension ships no node_modules (see THIRD_PARTY_NOTICES.md).
-  external: ['vscode'],
+  // `vscode` is provided by the host. The renderer library is not bundled: it ships installed in
+  // the VSIX's `node_modules`, where its worker and OpenChemLib sit where it expects them (ADR 0010).
+  external: ['vscode', '@reonarudo/smiles-renderer'],
   sourcemap: false
 });

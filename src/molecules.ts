@@ -2,6 +2,10 @@
 export interface MoleculeLine {
   smiles: string;
   label?: string;
+  /** 1-based line of the fence the string is on. */
+  line: number;
+  /** 0-based offset of the string in its line, past any indentation. */
+  offset: number;
 }
 
 /**
@@ -13,15 +17,16 @@ export interface MoleculeLine {
  */
 export function parseMolecules(content: string): MoleculeLine[] {
   const molecules: MoleculeLine[] = [];
-  for (const line of content.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
+  content.split('\n').forEach((text, index) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const position = { line: index + 1, offset: text.length - text.trimStart().length };
     const split = /\s/.exec(trimmed);
     if (!split) {
-      molecules.push({ smiles: trimmed });
+      molecules.push({ smiles: trimmed, ...position });
     } else {
-      molecules.push({ smiles: trimmed.slice(0, split.index), label: trimmed.slice(split.index).trim() });
+      molecules.push({ smiles: trimmed.slice(0, split.index), label: trimmed.slice(split.index).trim(), ...position });
     }
-  }
+  });
   return molecules;
 }

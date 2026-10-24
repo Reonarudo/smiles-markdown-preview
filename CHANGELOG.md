@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0 — 2026-10-24
+
+- Structures are drawn by smiles-renderer 1.0.0, the library reonarudo.github.io
+  uses, instead of a copy of OpenChemLib inside the extension. The engine is still
+  OpenChemLib 9.25.0. **Requires VS Code 1.101 or later.**
+- Each line of a fence is still its own structure: a bad molecule shows its error
+  in its cell while the rest of the row renders.
+- Parse errors name the line and column in the fence, and still quote the string
+  with a caret.
+- Changing `smiles.depictionTimeout` restarts the renderer with the new limit.
+- Structure ids are derived from the string, so identical molecules share them.
+
 ## 0.2.0 — 2026-09-29
 
 - `smarts` fences draw SMARTS substructure queries, one per line with optional

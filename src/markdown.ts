@@ -1,9 +1,8 @@
 import type MarkdownItConstructor from 'markdown-it';
 type MarkdownIt = InstanceType<typeof MarkdownItConstructor>;
-import { SVG_ID, type Notation, type RenderResult } from './renderer';
+import type { Notation, RenderInput, RenderResult } from '@reonarudo/smiles-renderer';
 import { parseAttributes, type FenceAttributes } from './attributes';
 import { parseMolecules, type MoleculeLine } from './molecules';
-import { randomBytes } from 'node:crypto';
 
 /** The class on every structure's root `<svg>`, so the preview stylesheet can select it. */
 export const BASE_CLASS = 'smiles';
@@ -23,21 +22,21 @@ const WORDING: Record<Notation, { name: string; line: string; whole: string }> =
   smarts: { name: 'SMARTS', line: 'SMARTS pattern', whole: 'pattern' }
 };
 
-export type Render = (source: string, notation: Notation) => RenderResult;
+export type Render = (input: RenderInput) => RenderResult;
 export type Report = (message: string) => void;
 
 /**
  * Claim `smiles` and `smarts` fences and render each of their lines as a structure.
+ *
+ * Each line is its own render of the bare string, so the library draws it alone and unlabelled,
+ * and the row, the labels and a failing line's report are this extension's HTML: a bad molecule
+ * costs only its own cell, and the row wraps to the preview column.
  *
  * Every fence we do not claim is delegated to whichever fence renderer was registered before us
  * (markdown-it's default, or another extension's, e.g. a Graphviz or Pikchr preview).
  */
 export function markdownPlugin(md: MarkdownIt, render: Render, report: Report = () => {}): MarkdownIt {
   const original = md.renderer.rules.fence;
-  // OpenChemLib writes the same id into every structure's <svg> and <style>, and a cached
-  // structure can appear twice, so every occurrence gets its own.
-  const session = randomBytes(6).toString('hex');
-  let occurrence = 0;
   md.renderer.rules.fence = (tokens, index, options, env, self) => {
     const token = tokens[index]!;
     const info = token.info.trim();
@@ -59,27 +58,42 @@ export function markdownPlugin(md: MarkdownIt, render: Render, report: Report = 
     // A pattern's structure also carries `smarts`, so it can be styled apart from a molecule.
     const extra = [notation === 'smarts' ? 'smarts' : undefined, attributes.class].filter(Boolean).join(' ') || undefined;
     const structures = molecules.map((molecule) => {
-      const result = render(molecule.smiles, notation);
-      if (result.status !== 'success') {
-        return { molecule, html: errorReport(md, describe(result, molecule.smiles, notation)) };
+      let result: RenderResult;
+      try {
+        result = render({ source: molecule.smiles, notation });
+      } catch (error) {
+        // A throw inside a markdown-it rule would remove the whole extension from the preview.
+        result = { status: 'failure', message: error instanceof Error ? error.message : String(error) };
       }
-      const svg = withClass(md, namespaceSvg(result.output, `sm-${session}-${++occurrence}`), extra);
-      return { molecule, html: svg };
+      if (result.status !== 'success') {
+        return { molecule, html: errorReport(md, describe(result, molecule, notation)) };
+      }
+      return { molecule, html: sized(withClass(md, result.output, extra)) };
     });
     return wrap(md, row(md, structures), attributes);
   };
   return md;
 }
 
-/** Replace the fixed id OpenChemLib wrote on the root `<svg>` and in its `<style>` selectors. */
-export function namespaceSvg(svg: string, id: string): string {
-  return svg.replace(`id="${SVG_ID}"`, `id="${id}"`).replaceAll(`#${SVG_ID} `, `#${id} `);
+/** The library's root `<svg viewBox="…" class="smiles" id="…">`, up to its closing `>`. */
+const ROOT = /^<svg\b[^>]*>/;
+
+/** Add the extra classes — `smarts`, the author's — escaped, beside the one the library put on the root. */
+function withClass(md: MarkdownIt, svg: string, extra: string | undefined): string {
+  if (!extra) return svg;
+  return svg.replace(ROOT, (tag) => tag.replace(`class="${BASE_CLASS}"`, `class="${BASE_CLASS} ${md.utils.escapeHtml(extra)}"`));
 }
 
-/** Put our base class — and the author's, if any — on the root `<svg>`. */
-function withClass(md: MarkdownIt, svg: string, extra: string | undefined): string {
-  const classes = extra ? `${BASE_CLASS} ${extra}` : BASE_CLASS;
-  return svg.replace(/^<svg\b/, `<svg class="${md.utils.escapeHtml(classes)}"`);
+/**
+ * Give the structure its natural width, which the library leaves to the consumer: its SVG carries a
+ * `viewBox` only, in OpenChemLib's pixels. Without it a small molecule would stretch to the column;
+ * the stylesheet still scales a wide one down.
+ */
+function sized(svg: string): string {
+  return svg.replace(ROOT, (tag) => {
+    const width = Number(/\bviewBox="[^"]*?([\d.]+)\s+[\d.]+"/.exec(tag)?.[1]);
+    return width > 0 ? tag.replace(/^<svg\b/, `<svg width="${width}px"`) : tag;
+  });
 }
 
 /**
@@ -119,7 +133,7 @@ function wrap(md: MarkdownIt, structure: string, attributes: FenceAttributes): s
 }
 
 /** The text of the error report shown in place of one structure. */
-function describe(result: Exclude<RenderResult, { status: 'success' }>, smiles: string, notation: Notation): string {
+function describe(result: Exclude<RenderResult, { status: 'success' }>, molecule: MoleculeLine, notation: Notation): string {
   const wording = WORDING[notation];
   if (result.status === 'timeout') {
     const seconds = (result.budget / 1000).toLocaleString('en-US', { maximumFractionDigits: 1 });
@@ -129,16 +143,18 @@ function describe(result: Exclude<RenderResult, { status: 'success' }>, smiles: 
   if (result.status === 'unavailable') {
     return `The ${wording.name} renderer could not start: ${result.reason}. It will retry on the next render.`;
   }
-  // Echo the string with a caret under the position OpenChemLib names, so the author need not
-  // count characters.
-  let text = result.message;
-  const position = Number(/\bposition:\s*(\d+)/i.exec(text)?.[1]);
-  if (position >= 0 && position <= smiles.length) {
-    text += `\n\n${smiles}\n${' '.repeat(position)}^`;
-  } else {
-    text += `\n\n${smiles}`;
-  }
-  return text;
+  // The library saw the string alone, so its column counts from the string's first character; the
+  // author's counts from the start of the fence line.
+  const { smiles } = molecule;
+  const column = result.column;
+  const where = column === undefined
+    ? `at line ${molecule.line}`
+    : `at line ${molecule.line}, column ${molecule.offset + column}`;
+  // Echo the string with a caret under the column, so the author need not count characters.
+  const caret = column !== undefined && column >= 1 && column <= smiles.length + 1
+    ? `\n${' '.repeat(column - 1)}^`
+    : '';
+  return `${result.message} ${where}\n\n${smiles}${caret}`;
 }
 
 function errorReport(md: MarkdownIt, text: string): string {

@@ -1,6 +1,9 @@
 # SMILES Structure Preview
 
-Adds SMILES molecules and SMARTS patterns to VS Code's built-in Markdown preview.
+Adds SMILES molecules and SMARTS patterns to VS Code's built-in Markdown preview,
+drawn by [smiles-renderer](https://github.com/Reonarudo/smiles-renderer), the same
+library that renders SMILES on reonarudo.github.io. Requires VS Code 1.101 or later;
+older versions get 0.2.0.
 
 Write a SMILES string in a fence tagged `smiles`:
 
@@ -82,13 +85,14 @@ output channel.
 
 ## Errors and limits
 
-A SMILES or SMARTS parse error is shown in place of the structure, quoting the
-string with a caret at the offending position. Depiction is limited to 4 KB per
-string
-and, by default, 3 seconds per molecule; a molecule that takes longer shows a
-timeout message until its string changes. Raise or lower the limit with the
-`smiles.depictionTimeout` setting (seconds, 0.5 to 60); a change applies to the
-next render, and molecules that timed out under the old limit are retried.
+A SMILES or SMARTS parse error is shown in place of that one structure, naming
+its line and column in the fence and quoting the string with a caret at the
+offending position; the other molecules of the fence still render. Depiction is
+limited to 4,000 characters per string and, by default, 3 seconds per molecule; a
+molecule that takes longer shows a timeout message until its string changes. Raise
+or lower the limit with the `smiles.depictionTimeout` setting (seconds, 0.5 to 60);
+a change restarts the renderer with the new limit, and molecules that timed out
+under the old limit are retried.
 
 Structures are drawn on a white card with CPK element colours in every theme.
 The extension reads no files, so it works fully in Restricted Mode and virtual
@@ -109,5 +113,5 @@ npm run screenshots     # regenerate media/screenshots from examples/demo.md
 
 ## License
 
-MIT for this extension; bundled OpenChemLib is BSD-3-Clause — see
+MIT for this extension; OpenChemLib, shipped with smiles-renderer, is BSD-3-Clause — see
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

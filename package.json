@@ -1,6 +1,6 @@
 {
   "name": "smiles-structure-preview",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "displayName": "SMILES Structure Preview",
   "description": "Adds SMILES molecules and SMARTS patterns to VS Code's built-in Markdown preview",
   "keywords": [
@@ -25,7 +25,7 @@
   },
   "homepage": "https://github.com/Reonarudo/smiles-markdown-preview#readme",
   "engines": {
-    "vscode": "^1.95.0",
+    "vscode": "^1.101.0",
     "node": ">=22"
   },
   "categories": [
@@ -52,7 +52,7 @@
           "default": 3,
           "minimum": 0.5,
           "maximum": 60,
-          "markdownDescription": "Seconds allowed to depict one molecule before it is abandoned and reported as a timeout. Takes effect on the next render."
+          "markdownDescription": "Seconds allowed to depict one molecule before it is abandoned and reported as a timeout. A change restarts the renderer and takes effect on the next render."
         }
       }
     }
@@ -63,18 +63,18 @@
     "test": "node --import tsx --test test/*.test.ts",
     "build": "node scripts/build.mjs",
     "vscode:prepublish": "npm run build",
-    "package": "vsce package --no-dependencies",
+    "package": "vsce package",
     "test:extension": "node scripts/test-extension.mjs",
     "test:package": "node scripts/test-package.mjs",
     "screenshots": "node scripts/screenshots.mjs"
   },
   "dependencies": {
-    "openchemlib": "9.25.0"
+    "@reonarudo/smiles-renderer": "https://github.com/Reonarudo/smiles-renderer/releases/download/v1.0.0/reonarudo-smiles-renderer-1.0.0.tgz"
   },
   "devDependencies": {
     "@types/markdown-it": "14.2.0",
     "@types/node": "22.20.3",
-    "@types/vscode": "1.95.0",
+    "@types/vscode": "1.101.0",
     "@vscode/test-electron": "3.1.0",
     "@vscode/vsce": "4.0.0",
     "esbuild": "0.28.2",

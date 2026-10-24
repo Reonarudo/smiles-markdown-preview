@@ -1,6 +1,5 @@
 **
 !dist/**
-!licenses/**
 !package.json
 !README.md
 !CHANGELOG.md
@@ -9,3 +8,10 @@
 !media/icon.png
 !media/preview.css
 !media/screenshots/*.jpg
+# The renderer library and its dependencies, installed by vsce from the production tree
+# (ADR 0010). Only files provably unused at runtime are left out: type declarations, source
+# maps, and two OpenChemLib files: its unminified debug build, reachable only through its
+# `./debug` export, and `resources.json`, read only by `Resources.registerFromNodejs` and
+# `registerFromUrl`; the renderer imports and calls neither. The packaged-VSIX host test is the
+# guard. vsce lets any negation win over any ignore, so the trim is written into the negation.
+!node_modules/**/!(*.d.ts|*.map|*.debug.js|resources.json)
