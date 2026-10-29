@@ -83,6 +83,15 @@ output channel.
 
 ![A captioned, centred structure and a parse error report with a caret in the Markdown preview](media/screenshots/caption-and-error.jpg)
 
+## Viewing the source
+
+Every structure carries a small button in its top corner that flips the fence
+between the structure and the fence's text, highlighted the way the preview shows
+any other code block. A multi-line fence flips as a whole. A flipped fence stays
+flipped while you edit the document, after *Markdown: Refresh Preview*, and when
+the preview is reopened; flip it back to see the structure again. The button is a
+reader's control: a fence cannot be written to open in source view.
+
 ## Errors and limits
 
 A SMILES or SMARTS parse error is shown in place of that one structure, naming
@@ -108,6 +117,7 @@ npm run lint            # tsc --noEmit
 npm test                # node --test, after building
 npm run package         # vsce package
 npm run test:package    # the VSIX inside a real VS Code
+npm run test:preview    # the view toggle in a live preview, through Playwright
 npm run screenshots     # regenerate media/screenshots from examples/demo.md
 ```
 

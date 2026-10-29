@@ -88,6 +88,10 @@ test('a Markdown document renders structures through the library beside delegate
     assert.match(html, /<text [^>]*>Na<\/text>/);
     assert.match(html, /<div class="smiles-error" role="alert"><pre>dangling ring closure: 1 at line 2, column 7\n\nC1CC\n    \^<\/pre><\/div>/);
     assert.match(html, /<pre><code class="language-smi">CCO left alone/);
+    // The view toggle: one wrapper per claimed fence, with the source view in the fence's own word.
+    assert.equal((html.match(/<div class="smiles-fence code-line" data-line="\d+" data-fence-key="[0-9a-f]{8}"><button /g) ?? []).length, 4);
+    assert.match(html, /<\/div><pre><code class="language-smiles">CCO ethanol\n  C1CC\n\[Na\+\]\.\[Cl-\] salt\n<\/code><\/pre>\n<\/div>/);
+    assert.match(html, /<\/div><pre><code class="language-smarts">\[CX3\]\(=O\)\[OX2H1\] carboxylic acid\n\[C;x3\]\n<\/code><\/pre>\n<\/div>/);
     assert.deepEqual(logged, ['Unknown attribute "algin"; ignored.']);
   } finally {
     await runtime.dispose();

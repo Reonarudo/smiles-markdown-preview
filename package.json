@@ -1,6 +1,6 @@
 {
   "name": "smiles-structure-preview",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "displayName": "SMILES Structure Preview",
   "description": "Adds SMILES molecules and SMARTS patterns to VS Code's built-in Markdown preview",
   "keywords": [
@@ -44,6 +44,9 @@
     "markdown.previewStyles": [
       "media/preview.css"
     ],
+    "markdown.previewScripts": [
+      "media/preview.js"
+    ],
     "configuration": {
       "title": "SMILES Structure Preview",
       "properties": {
@@ -65,6 +68,8 @@
     "vscode:prepublish": "npm run build",
     "package": "vsce package",
     "test:extension": "node scripts/test-extension.mjs",
+    "pretest:preview": "npm run build",
+    "test:preview": "node scripts/test-preview.mjs",
     "test:package": "node scripts/test-package.mjs",
     "screenshots": "node scripts/screenshots.mjs"
   },

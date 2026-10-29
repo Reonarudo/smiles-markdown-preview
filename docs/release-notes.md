@@ -1,7 +1,8 @@
-# SMILES Structure Preview v0.3.0
+# SMILES Structure Preview v0.4.0
 
-Structures are now drawn by [smiles-renderer](https://github.com/Reonarudo/smiles-renderer) 1.0.0, the same library that renders SMILES on reonarudo.github.io, instead of a copy inside the extension. The engine is still OpenChemLib 9.25.0. **Requires VS Code 1.101 or later**; older versions stay on 0.2.0.
+Every structure now carries a view toggle in its top corner that flips the fence between the structure and its source text, highlighted as the preview highlights any code block. A flipped fence stays flipped while you edit, after *Markdown: Refresh Preview* and when the preview is reopened; flip it back to see the structure again.
 
-- Each line of a fence is still its own structure, and a bad molecule shows its error in its own cell.
-- Parse errors name the line and column in the fence.
-- Changing `smiles.depictionTimeout` restarts the renderer with the new limit.
+- A multi-line fence flips as a whole: the row and its per-line error cards on one side, the fence body on the other.
+- The toggle is also present on error cards, including the empty-fence report.
+- It is a reader's control; no fence attribute presets it.
+- Still requires VS Code 1.101 or later.

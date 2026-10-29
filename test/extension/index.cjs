@@ -9,6 +9,7 @@ exports.run = async () => {
   const extension = vscode.extensions.getExtension('ReoX86.smiles-structure-preview');
   assert(extension, 'extension ReoX86.smiles-structure-preview is installed');
   assert.deepEqual(extension.packageJSON.contributes['markdown.previewStyles'], ['media/preview.css']);
+  assert.deepEqual(extension.packageJSON.contributes['markdown.previewScripts'], ['media/preview.js']);
   await extension.activate();
   await vscode.extensions.getExtension('vscode.markdown-language-features').activate();
   const render = (markdown) => vscode.commands.executeCommand('markdown.api.render', markdown);
@@ -29,12 +30,25 @@ exports.run = async () => {
   assert.match(mixed, /class="[^"]*\blanguage-graphviz"/);
   assert.match(mixed, /class="[^"]*\blanguage-swift"/);
 
+  // The view toggle's wrapper, and its source view delegated to VS Code's own fence rule: the
+  // `<pre>` carries VS Code's shell (`dir="auto"`, not the plugin's hand-built fallback) minus
+  // the scroll-sync class and line, which only the wrapper carries.
+  assert.match(mixed, /<div class="smiles-fence code-line" data-line="0" data-fence-key="[0-9a-f]{8}"><button type="button" class="smiles-toggle" aria-pressed="false" aria-label="Source view" title="Source view"><svg class="smiles-icon-code"/);
+  assert.match(mixed, /<\/button><div class="smiles-rendering"><svg width="[\d.]+px"[^>]*\bclass="smiles"/);
+  assert.match(mixed, /<\/div><pre><code class="language-smiles" dir="auto">CC\(=O\)Oc1ccccc1C\(=O\)O\n<\/code><\/pre>\n<\/div>/);
+  assert.match(mixed, /<\/div><pre><code class="language-smiles" dir="auto">CCO ethanol\n\[Na\+\]\.\[Cl-\] salt\n<\/code><\/pre>\n<\/div>/);
+  assert.equal((mixed.match(/<div class="smiles-fence /g) ?? []).length, 2, 'one wrapper per claimed fence, none for delegated ones');
+  assert.equal((mixed.match(/<pre><code class="language-smiles" dir="auto">/g) ?? []).length, 2, 'no sync attributes on the source <code>');
+  for (const line of ['0', '4']) assert.equal((mixed.match(new RegExp(`data-line="${line}"`, 'g')) ?? []).length, 1, `one scroll-sync element for the fence at line ${line}`);
+
   // SMARTS fences: query features are drawn, and the same string is refused as SMILES.
   const patterns = await render(fence('smarts {caption="Queries"}', '[CX3](=O)[OX2H1] acid\n[C,N;!H0]~*') + fence('smiles', '[C,N;!H0]~*'));
   assert.equal((patterns.match(/<svg [^>]*\bclass="smiles smarts"/g) ?? []).length, 2);
   assert.match(patterns, /<text [^>]*>\[C,N\]<\/text>/);
   assert.match(patterns, /<figcaption>Queries<\/figcaption>/);
   assert.match(patterns, /<div class="smiles-error" role="alert"><pre>alternative atom definitions not supported/);
+  // A smarts fence is wrapped too, and its source view carries its own word.
+  assert.match(patterns, /<\/div><pre><code class="language-smarts" dir="auto">\[CX3\]\(=O\)\[OX2H1\] acid\n\[C,N;!H0\]~\*\n<\/code><\/pre>\n<\/div>/);
 
   // Attributes, escaping and a tolerated typo.
   const attributed = await render(fence('smiles {alt="Ethanol" caption="Figure 1: <alcohol>" align="center" algin="x" class="wide\\" onload=\\"x"}', 'CCO'));

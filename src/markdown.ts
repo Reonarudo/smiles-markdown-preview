@@ -4,7 +4,7 @@ import type { Notation, RenderInput, RenderResult } from '@reonarudo/smiles-rend
 import { parseAttributes, type FenceAttributes } from './attributes';
 import { parseMolecules, type MoleculeLine } from './molecules';
 
-/** The class on every structure's root `<svg>`, so the preview stylesheet can select it. */
+/** The class on every structure's root `<svg>`, and the prefix of every class the preview stylesheet selects. */
 export const BASE_CLASS = 'smiles';
 
 /**
@@ -51,9 +51,11 @@ export function markdownPlugin(md: MarkdownIt, render: Render, report: Report = 
       report(diagnostic);
     }
     const notation = claimed[1] as Notation;
+    // Before anything is rendered, so every return path below, including the empty fence, has the source view.
+    const source = sourceView(md, original, tokens, index, options, env, self);
     const molecules = parseMolecules(token.content);
     if (molecules.length === 0) {
-      return errorReport(md, `The fence is empty. Write one ${WORDING[notation].line} per line.`);
+      return fence(token, errorReport(md, `The fence is empty. Write one ${WORDING[notation].line} per line.`), source);
     }
     // A pattern's structure also carries `smarts`, so it can be styled apart from a molecule.
     const extra = [notation === 'smarts' ? 'smarts' : undefined, attributes.class].filter(Boolean).join(' ') || undefined;
@@ -70,10 +72,82 @@ export function markdownPlugin(md: MarkdownIt, render: Render, report: Report = 
       }
       return { molecule, html: sized(withClass(md, result.output, extra)) };
     });
-    return wrap(md, row(md, structures), attributes);
+    // One wrapper for the whole fence: the row and its per-cell reports are the rendering slot.
+    return fence(token, wrap(md, row(md, structures), attributes), source);
   };
   return md;
 }
+
+// The view toggle (docs/source-toggle-spec.md in onnx-markdown-preview): every claimed fence is
+// wrapped with a toggle button, its rendering, and the hidden source view that media/preview.js
+// and preview.css swap.
+
+type FenceRule = NonNullable<MarkdownIt['renderer']['rules']['fence']>;
+
+/**
+ * The source view: VS Code's highlighted `<pre><code>` for this fence, from the fence rule that
+ * was registered before us, called with a shallow-cloned token so neither rule sees the other's
+ * changes. Without one (bare markdown-it in a unit test) a plain escaped block stands in.
+ */
+function sourceView(md: MarkdownIt, original: FenceRule | undefined, ...args: Parameters<FenceRule>): string {
+  const [tokens, index, options, env, self] = args;
+  const token = tokens[index]!;
+  if (!original) {
+    const word = md.utils.escapeHtml(token.info.trim().split(/\s+/)[0] ?? '');
+    return `<pre><code class="language-${word}">${md.utils.escapeHtml(token.content)}</code></pre>\n`;
+  }
+  const clone = Object.assign(Object.create(Object.getPrototypeOf(token)), token, {
+    attrs: token.attrs ? token.attrs.map((attr) => [...attr]) : null
+  });
+  const copy = tokens.slice();
+  copy[index] = clone;
+  return unsynced(original(copy, index, options, env, self));
+}
+
+/**
+ * Drop VS Code's `code-line` class and `data-line` from the delegated `<code>`, so the wrapper is
+ * the one element VS Code's scroll sync sees for this fence. VS Code measures an element's height
+ * up to its first nested `.code-line`; a hidden one has a zero rect, which collapsed the wrapper
+ * to a pixel in rendering view and sent editor-to-preview sync to the top of the page.
+ */
+function unsynced(html: string): string {
+  return html.replace(/^<pre><code\b[^>]*>/, (tag) =>
+    tag.replace(/ data-line="[^"]*"/, '').replace(/ class="([^"]*)"/, (_, names: string) => {
+      const kept = names.split(' ').filter((name) => name !== 'code-line').join(' ');
+      return kept ? ` class="${kept}"` : '';
+    }));
+}
+
+/**
+ * The wrapper every claimed fence gets: toggle first, the rendering slot, then the source `<pre>`.
+ * `code-line` and `data-line` keep VS Code's scroll sync; a token without a map (a bare string
+ * through `markdown.api.render`) gets neither.
+ */
+function fence(token: { content: string; map: [number, number] | null }, rendering: string, source: string): string {
+  const line = token.map?.[0];
+  const classes = line === undefined ? `${BASE_CLASS}-fence` : `${BASE_CLASS}-fence code-line`;
+  const lineAttr = line === undefined ? '' : ` data-line="${line}"`;
+  return `<div class="${classes}"${lineAttr} data-fence-key="${fenceKey(token.content)}">${TOGGLE}` +
+    `<div class="${BASE_CLASS}-rendering">${rendering}</div>${source}</div>\n`;
+}
+
+/** The fence key: FNV-1a, 32-bit, of the exact body, as eight hex digits. The script never hashes. */
+function fenceKey(body: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < body.length; i++) {
+    hash ^= body.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, '0');
+}
+
+// Both glyphs ship; the stylesheet shows the one naming the view a click leads to.
+const ICON_CODE = `<svg class="${BASE_CLASS}-icon-code" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">` +
+  '<path d="M5.7 3.3 1 8l4.7 4.7.9-.9L2.8 8l3.8-3.8zM10.3 3.3l-.9.9L13.2 8l-3.8 3.8.9.9L15 8z"/></svg>';
+const ICON_GRAPH = `<svg class="${BASE_CLASS}-icon-graph" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.2">` +
+  '<rect x="1.5" y="1.5" width="5" height="3.5" rx=".5"/><rect x="9.5" y="1.5" width="5" height="3.5" rx=".5"/><rect x="5.5" y="11" width="5" height="3.5" rx=".5"/>' +
+  '<path d="M4 5v3h8V5M8 8v3"/></svg>';
+const TOGGLE = `<button type="button" class="${BASE_CLASS}-toggle" aria-pressed="false" aria-label="Source view" title="Source view">${ICON_CODE}${ICON_GRAPH}</button>`;
 
 /** The library's root `<svg viewBox="…" class="smiles" id="…">`, up to its closing `>`. */
 const ROOT = /^<svg\b[^>]*>/;

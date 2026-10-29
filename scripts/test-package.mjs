@@ -15,7 +15,7 @@ try {
   execFileSync('unzip', ['-q', file, '-d', unpacked]);
   const root = join(unpacked, 'extension');
   for (const path of [
-    'dist/extension.js', 'media/preview.css', 'media/icon.png', 'readme.md', 'LICENSE.txt', 'THIRD_PARTY_NOTICES.md',
+    'dist/extension.js', 'media/preview.css', 'media/preview.js', 'media/icon.png', 'readme.md', 'LICENSE.txt', 'THIRD_PARTY_NOTICES.md',
     'node_modules/@reonarudo/smiles-renderer/package.json',
     'node_modules/@reonarudo/smiles-renderer/dist/index.js',
     'node_modules/@reonarudo/smiles-renderer/dist/worker.js',

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0 — 2026-10-28
+
+- Every structure carries a view toggle in its top corner that flips the fence
+  between the structure and its source text, highlighted as the preview highlights
+  any code block. A multi-line fence flips as a whole, with the row and its
+  per-line error cards on one side and the fence body on the other. A flipped
+  fence stays flipped while the document is edited, after *Markdown: Refresh
+  Preview* and when the preview is reopened. The toggle is also present on error
+  cards, including the empty-fence report. It is a reader's control; no fence
+  attribute presets it.
+- A preview script (`media/preview.js`) is contributed for the first time;
+  `npm run test:preview` exercises it in a live preview through Playwright.
+
 ## 0.3.0 — 2026-10-24
 
 - Structures are drawn by smiles-renderer 1.0.0, the library reonarudo.github.io
